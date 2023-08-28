@@ -33,26 +33,89 @@ class MyFormWidget extends StatefulWidget {
 }
 
 class _MyFormWidgetState extends State<MyFormWidget> {
+  bool isValidated = false;
   late RegistrationForm _registrationForm;
+
+  void _onNameChanged(String value) {
+    _registrationForm = _registrationForm.copyWith(name: value);
+  }
+
+  void _onPasswordChanged(String value) {
+    _registrationForm = _registrationForm.copyWith(password: value);
+  }
+
+  void _onValidate() {
+    setState(() {
+      isValidated = _registrationForm.validate();
+    });
+  }
+
+  Future<Map<String, dynamic>> _onSubmit() async {
+    await Future.delayed(
+      const Duration(
+        seconds: 1,
+      ),
+    );
+
+    return _registrationForm.toJson();
+  }
 
   @override
   void initState() {
     super.initState();
 
-    final formKey = GlobalKey<FormState>();
-
-    _registrationForm = RegistrationForm(key: formKey);
+    _registrationForm = RegistrationForm(key: GlobalKey<FormState>());
   }
 
   @override
   Widget build(BuildContext context) {
     return Form(
       key: _registrationForm.key,
-      child: Column(
-        children: [
-          TextFormField(),
-          TextFormField(),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextFormField(
+              validator: _registrationForm.validateName,
+              onChanged: _onNameChanged,
+              decoration: const InputDecoration(
+                label: Text('Name'),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(
+              height: 12,
+            ),
+            TextFormField(
+              validator: _registrationForm.validatePassword,
+              onChanged: _onPasswordChanged,
+              decoration: const InputDecoration(
+                label: Text('Password'),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(
+              height: 12,
+            ),
+            isValidated
+                ? FutureBuilder(
+                    future: _onSubmit(),
+                    builder: (context, snapshot) {
+                      return switch (snapshot.connectionState) {
+                        ConnectionState.done => Text(snapshot.data.toString()),
+                        ConnectionState.waiting => const Text('Waiting'),
+                        ConnectionState.active => const Text('Active'),
+                        ConnectionState.none => const Text('None')
+                      };
+                    },
+                  )
+                : ElevatedButton(
+                    onPressed: _onValidate,
+                    child: const Text('Submit'),
+                  )
+          ],
+        ),
       ),
     );
   }
@@ -79,7 +142,7 @@ base class BaseForm {
   }
 }
 
-interface class IModel<T> {
+abstract interface class IModel<T> {
   Map<String, dynamic> toJson() {
     throw UnimplementedError('toJson() is not yet implemented');
   }
@@ -101,10 +164,28 @@ final class RegistrationForm extends BaseForm
   final String password;
 
   String? validateName(String? value) {
+    if (value != null || value!.isNotEmpty) {
+      final numRegEx = RegExp(r'^[0-9]');
+
+      if (value.length < 3) {
+        return 'Name cannot be less than 3 characters';
+      }
+
+      if (numRegEx.hasMatch(value)) {
+        return 'Name cannot contain numbers';
+      }
+    }
+
     return null;
   }
 
   String? validatePassword(String? value) {
+    if (value != null || value!.isNotEmpty) {
+      if (value.length < 6) {
+        return 'Password cannot be less than 6 characters';
+      }
+    }
+
     return null;
   }
 
@@ -129,4 +210,3 @@ final class RegistrationForm extends BaseForm
     );
   }
 }
-
